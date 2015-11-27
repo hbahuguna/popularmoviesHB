@@ -55,7 +55,7 @@ public class MovieAdapter extends BaseAdapter {
             return -1L;
         }
 
-        return movie.id;
+        return movie.getId();
     }
 
     @Override

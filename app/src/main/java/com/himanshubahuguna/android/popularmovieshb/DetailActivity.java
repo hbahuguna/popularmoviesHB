@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ImageView;
@@ -17,7 +18,7 @@ import com.himanshubahuguna.android.popularmovieshb.model.Movie;
 /**
  * Created by hbahuguna on 11/24/2015.
  */
-public class DetailActivity extends ActionBarActivity {
+public class DetailActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,10 +28,10 @@ public class DetailActivity extends ActionBarActivity {
         Intent intent = getIntent();
         if (intent != null && intent.hasExtra(Movie.EXTRA_MOVIE)) {
             Movie movie = new Movie(intent.getBundleExtra(Movie.EXTRA_MOVIE));
-            ((TextView)findViewById(R.id.movie_title)).setText(movie.title);
+            ((TextView)findViewById(R.id.movie_title)).setText(movie.getTitle());
             ((TextView)findViewById(R.id.movie_rating)).setText(movie.getRating());
-            ((TextView)findViewById(R.id.movie_overview)).setText(movie.overview);
-            ((TextView)findViewById(R.id.movie_release_date)).setText(movie.release_date);
+            ((TextView)findViewById(R.id.movie_overview)).setText(movie.getOverview());
+            ((TextView)findViewById(R.id.movie_release_date)).setText(movie.getReleaseDate());
 
 
             Uri posterUri = movie.buildPosterUri(getString(R.string.api_poster_default_size));

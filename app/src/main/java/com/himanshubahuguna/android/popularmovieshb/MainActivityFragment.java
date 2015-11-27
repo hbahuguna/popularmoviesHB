@@ -1,7 +1,6 @@
 package com.himanshubahuguna.android.popularmovieshb;
 
 import android.content.Intent;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
@@ -13,41 +12,54 @@ import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.GridView;
-import android.widget.TextView;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.himanshubahuguna.android.popularmovieshb.model.Movie;
+import com.himanshubahuguna.android.popularmovieshb.model.MovieDBApiService;
+import com.himanshubahuguna.android.popularmovieshb.model.Result;
+import com.himanshubahuguna.android.popularmovieshb.model.SearchResponse;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import retrofit.Callback;
+import retrofit.GsonConverterFactory;
+import retrofit.Response;
+import retrofit.Retrofit;
 
 /**
  * A placeholder fragment containing a simple view.
  */
 public class MainActivityFragment extends Fragment {
 
+    private ArrayList result = new ArrayList<>();
+
     public MainActivityFragment() {
     }
 
-    public static final int MAX_PAGES = 100;
+    public static final int MAX_PAGES = 50;
     private boolean mIsLoading = false;
     private int mPagesLoaded = 0;
-    private TextView mLoading;
+    // private TextView mProgress;
     private MovieAdapter mImages;
+    private ProgressBar mProgress;
 
     private class FetchPageTask extends AsyncTask<Integer, Void, Collection<Movie>> {
 
         public  final String LOG_TAG = FetchPageTask.class.getSimpleName();
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            mProgress = new ProgressBar(getActivity());
+            mProgress.findViewById(R.id.progress_bar);
+        }
 
         @Override
         protected Collection<Movie> doInBackground(Integer... params) {
@@ -56,93 +68,52 @@ public class MainActivityFragment extends Fragment {
             }
 
             int page = params[0];
-            HttpURLConnection urlConnection = null;
-            BufferedReader reader = null;
-            String responseJsonStr = null;
+            final String API_BASE_URL = "http://api.themoviedb.org/3/movie/";
+            final String API_PARAM_PAGE = "page";
+            final String API_PARAM_KEY = "api_key";
+            final String API_SORTING = PreferenceManager
+                    .getDefaultSharedPreferences(getActivity())
+                    .getString(
+                            getString(R.string.pref_sorting_key),
+                            getString(R.string.pref_sorting_default_value)
+                    );
 
-            try {
-                final String API_BASE_URL = "http://api.themoviedb.org/3/movie/";
-                final String API_PARAM_PAGE = "page";
-                final String API_PARAM_KEY = "api_key";
-                final String API_SORTING = PreferenceManager
-                        .getDefaultSharedPreferences(getActivity())
-                        .getString(
-                                getString(R.string.pref_sorting_key),
-                                getString(R.string.pref_sorting_default_value)
+            final Gson gson = new GsonBuilder()
+                    .setDateFormat("yyyy-MM-dd")
+                    .create();
+            final Map<String,Object> queryParams = new HashMap<String,Object>();
+            queryParams.put(API_PARAM_KEY, R.string.api_key);
+            queryParams.put(API_PARAM_PAGE, page);
+            final Retrofit retrofit = new Retrofit.Builder()
+                    .baseUrl(API_BASE_URL)
+                    .addConverterFactory(GsonConverterFactory.create(gson))
+                    .build();
+            final MovieDBApiService movieDBApiService = retrofit.create(MovieDBApiService.class);
+
+            retrofit.Call<SearchResponse> movies = movieDBApiService
+                    .listMovies(API_SORTING, getString(R.string.api_key), page);
+            movies.enqueue(new Callback<SearchResponse>() {
+                @Override
+                public void onResponse(Response<SearchResponse> response, Retrofit retrofit) {
+                    SearchResponse searchResponse = response.body();
+                    for (Result movieResult : searchResponse.getResults()) {
+                        Movie movie = new Movie(movieResult.getId(),
+                                movieResult.getOriginalTitle(),
+                                movieResult.getOverview(),
+                                movieResult.getPosterPath(),
+                                movieResult.getVoteAverage(),
+                                movieResult.getVoteCount(),
+                                movieResult.getReleaseDate()
                         );
-
-                Uri builtUri = Uri.parse(API_BASE_URL).buildUpon()
-                        .appendPath(API_SORTING)
-                        .appendQueryParameter(API_PARAM_PAGE, String.valueOf(page))
-                        .appendQueryParameter(API_PARAM_KEY, getString(R.string.api_key))
-                        .build();
-
-
-                Log.d(LOG_TAG, "QUERY URI: " + builtUri.toString());
-                URL url = new URL(builtUri.toString());
-
-                // Create the request to themoviedb api, and open the connection
-                urlConnection = (HttpURLConnection) url.openConnection();
-                urlConnection.setRequestMethod("GET");
-                urlConnection.connect();
-
-                // Read the input stream into a String
-                InputStream inputStream = urlConnection.getInputStream();
-                StringBuffer buffer = new StringBuffer();
-                if (inputStream == null) {
-                    // Nothing to do.
-                    return null;
-                }
-                reader = new BufferedReader(new InputStreamReader(inputStream));
-
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    // Since it's JSON, adding a newline isn't necessary (it won't affect parsing)
-                    // But it does make debugging a *lot* easier if you print out the completed
-                    // buffer for debugging.
-                    buffer.append(line + "\n");
-                }
-
-                if (buffer.length() == 0) {
-                    // Stream was empty.  No point in parsing.
-                    return null;
-                }
-                responseJsonStr = buffer.toString();
-
-            } catch (Exception ex) {
-                Log.e(LOG_TAG, "Error", ex);
-                return null;
-            } finally {
-                if (urlConnection != null) {
-                    urlConnection.disconnect();
-                }
-                if (reader != null) {
-                    try {
-                        reader.close();
-                    } catch (final IOException e) {
-                        Log.e(LOG_TAG, "Error closing stream", e);
+                        result.add(movie);
                     }
                 }
-            }
 
-            try {
-                return fetchMoviesFromJson(responseJsonStr);
-            } catch (JSONException ex) {
-                Log.d(LOG_TAG, "Can't parse JSON: " + responseJsonStr, ex);
-                return null;
-            }
-        }
+                @Override
+                public void onFailure(Throwable t) {
 
-        private Collection<Movie> fetchMoviesFromJson(String jsonStr) throws JSONException {
-            final String KEY_MOVIES = "results";
-
-            JSONObject json  = new JSONObject(jsonStr);
-            JSONArray movies = json.getJSONArray(KEY_MOVIES);
-            ArrayList result = new ArrayList<>();
-
-            for (int i = 0; i < movies.length(); i++) {
-                result.add(Movie.fromJson(movies.getJSONObject(i)));
-            }
+                }
+            });
 
             return result;
         }
@@ -180,8 +151,8 @@ public class MainActivityFragment extends Fragment {
 
         mIsLoading = true;
 
-        if (mLoading != null) {
-            mLoading.setVisibility(View.VISIBLE);
+        if (mProgress != null) {
+            mProgress.setVisibility(View.VISIBLE);
         }
 
         new FetchPageTask().execute(mPagesLoaded + 1);
@@ -194,8 +165,8 @@ public class MainActivityFragment extends Fragment {
 
         mIsLoading = false;
 
-        if (mLoading != null) {
-            mLoading.setVisibility(View.GONE);
+        if (mProgress != null) {
+            mProgress.setVisibility(View.GONE);
         }
     }
 
@@ -203,13 +174,9 @@ public class MainActivityFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_main, container, false);
-
         mImages = new MovieAdapter(getActivity());
-        mLoading = (TextView) view.findViewById(R.id.loading);
 
         initGrid(view);
-
-        startLoading();
 
         return view;
     }
@@ -220,7 +187,6 @@ public class MainActivityFragment extends Fragment {
         if (gridview == null) {
             return;
         }
-
         gridview.setAdapter(mImages);
 
         gridview.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -244,6 +210,7 @@ public class MainActivityFragment extends Fragment {
 
 
         gridview.setOnScrollListener(
+
                 new AbsListView.OnScrollListener() {
                     @Override
                     public void onScrollStateChanged(AbsListView view, int scrollState) {
@@ -261,5 +228,15 @@ public class MainActivityFragment extends Fragment {
 
         );
     }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        startLoading();
+
+    }
+
+
 
 }

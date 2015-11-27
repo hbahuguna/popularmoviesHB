@@ -2,6 +2,8 @@ package com.himanshubahuguna.android.popularmovieshb.model;
 
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Parcel;
+import android.os.Parcelable;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -9,23 +11,23 @@ import org.json.JSONObject;
 /**
  * Created by hbahuguna on 11/24/2015.
  */
-public class Movie {
+public class Movie implements Parcelable {
     public static final String EXTRA_MOVIE = "com.himanshubahuguna.android.popularmovieshb.EXTRA_MOVIE";
-    public static final String KEY_ID = "id";
-    public static final String KEY_TITLE = "title";
-    public static final String KEY_OVERVIEW = "overview";
-    public static final String KEY_POSTER_PATH = "poster_path";
-    public static final String KEY_VOTE_AVERAGE = "vote_average";
-    public static final String KEY_VOTE_COUNT = "vote_count";
-    public static final String KEY_RELEASE_DATE = "release_date";
+    private static final String KEY_ID = "id";
+    private static final String KEY_TITLE = "title";
+    private static final String KEY_OVERVIEW = "overview";
+    private static final String KEY_POSTER_PATH = "poster_path";
+    private static final String KEY_VOTE_AVERAGE = "vote_average";
+    private static final String KEY_VOTE_COUNT = "vote_count";
+    private static final String KEY_RELEASE_DATE = "release_date";
 
-    public final long id;
-    public final String title;
-    public final String overview;
-    public final String poster_path;
-    public final double vote_average;
-    public final long vote_count;
-    public final String release_date;
+    private final long id;
+    private final String title;
+    private final String overview;
+    private final String poster_path;
+    private final double vote_average;
+    private final long vote_count;
+    private final String release_date;
 
     public Movie(long id,
                  String title, String overview, String poster_path,
@@ -38,6 +40,37 @@ public class Movie {
         this.vote_count = vote_count;
         this.release_date = release_date;
     }
+    public String getRating() {
+        return "" + vote_average + " / 10";
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getOverview() {
+        return overview;
+    }
+
+    public double getVoteAverage() {
+        return vote_average;
+    }
+
+    public String getPostePath() {
+        return poster_path;
+    }
+
+    public long getVote_count() {
+        return vote_count;
+    }
+
+    public String getReleaseDate() {
+        return release_date;
+    }
 
     public Movie(Bundle bundle) {
         this(
@@ -49,10 +82,6 @@ public class Movie {
                 bundle.getLong(KEY_VOTE_COUNT),
                 bundle.getString(KEY_RELEASE_DATE)
         );
-    }
-
-    public String getRating() {
-        return "" + vote_average + " / 10";
     }
 
     public Bundle toBundle() {
@@ -71,18 +100,6 @@ public class Movie {
     }
 
 
-    public static Movie fromJson(JSONObject jsonObject) throws JSONException {
-        return new Movie(
-                jsonObject.getLong(KEY_ID),
-                jsonObject.getString(KEY_TITLE),
-                jsonObject.getString(KEY_OVERVIEW),
-                jsonObject.getString(KEY_POSTER_PATH),
-                jsonObject.getDouble(KEY_VOTE_AVERAGE),
-                jsonObject.getLong(KEY_VOTE_COUNT),
-                jsonObject.getString(KEY_RELEASE_DATE)
-        );
-    }
-
     public Uri buildPosterUri(String size) {
         final String BASE_URL = "http://image.tmdb.org/t/p/";
 
@@ -92,5 +109,41 @@ public class Movie {
                 .build();
 
         return builtUri;
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeLong(id);
+        dest.writeString(title);
+        dest.writeString(overview);
+        dest.writeString(poster_path);
+        dest.writeDouble(vote_average);
+        dest.writeLong(vote_count);
+        dest.writeString(release_date);
+    }
+
+    public static final Parcelable.Creator<Movie> CREATOR = new Parcelable.Creator<Movie>() {
+        public Movie createFromParcel(Parcel in) {
+            return new Movie(in);
+        }
+
+        public Movie[] newArray(int size) {
+            return new Movie[size];
+        }
+    };
+
+    public Movie(Parcel in) {
+        id = in.readLong();
+        title = in.readString();
+        overview = in.readString();
+        poster_path = in.readString();
+        vote_average = in.readDouble();
+        vote_count = in.readLong();
+        release_date = in.readString();
     }
 }
