@@ -1,13 +1,19 @@
 package com.himanshubahuguna.android.popularmovieshb;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.net.Uri;
+import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.CursorAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.TextView;
 
+import com.himanshubahuguna.android.popularmovieshb.data.MovieContract;
 import com.himanshubahuguna.android.popularmovieshb.model.Movie;
 import com.squareup.picasso.Picasso;
 
@@ -17,69 +23,36 @@ import java.util.Collection;
 /**
  * Created by hbahuguna on 11/24/2015.
  */
-public class MovieAdapter extends BaseAdapter {
-    private Context mContext;
-    private final ArrayList<Movie> mMovies;
-    private final int mHeight;
-    private final int mWidth;
+public class MovieAdapter extends CursorAdapter {
 
-    public MovieAdapter(Context c) {
-        mContext = c;
-        mMovies = new ArrayList<>();
-        mHeight = Math.round(mContext.getResources().getDimension(R.dimen.poster_height));
-        mWidth = Math.round(mContext.getResources().getDimension(R.dimen.poster_width));
-    }
+    public static final String LOG_TAG = MovieAdapter.class.getSimpleName();
 
-    public void addAll(Collection<Movie> xs) {
-        mMovies.addAll(xs);
-        notifyDataSetChanged();
+    public MovieAdapter(Context context, Cursor cursor, int flags) {
+        super(context, cursor, flags);
     }
 
     @Override
-    public int getCount() {
-        return mMovies.size();
+    public View newView(Context context, Cursor cursor, ViewGroup parent) {
+        return LayoutInflater.from(context).inflate(R.layout.movie_poster, parent, false);
     }
 
     @Override
-    public Movie getItem(int position) {
-        if (position < 0 || position >= mMovies.size()) {
-            return null;
-        }
-        return mMovies.get(position);
+    public void bindView(View view, Context context, Cursor cursor) {
+        ImageView posterImageView = (ImageView) view.findViewById(R.id.movie_poster);
+
+        int moviePosterColumn = cursor.getColumnIndex(MovieContract.MovieEntry.COLUMN_POSTER_PATH);
+        String moviePoster = cursor.getString(moviePosterColumn);
+
+        Uri imageUri = Uri.parse(Config.IMAGE_BASE_URL).buildUpon()
+                .appendPath(context.getString(R.string.api_image_size_medium))
+                .appendPath(moviePoster.substring(1))
+                .build();
+
+        Log.d(LOG_TAG + " - Image uri:", imageUri.toString());
+
+        Picasso.with(context).load(imageUri)
+                .placeholder(R.drawable.loading)
+                .into(posterImageView);
     }
 
-    @Override
-    public long getItemId(int position) {
-        Movie movie = getItem(position);
-        if (movie == null) {
-            return -1L;
-        }
-
-        return movie.getId();
-    }
-
-    @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
-        Movie movie = getItem(position);
-        if (movie == null) {
-            return null;
-        }
-
-        ImageView imageView;
-        if (convertView == null) {
-            // if it's not recycled, initialize some attributes
-            imageView = new ImageView(mContext);
-            imageView.setLayoutParams(new GridView.LayoutParams(mWidth, mHeight));
-            imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        } else {
-            imageView = (ImageView) convertView;
-        }
-
-        Uri posterUri = movie.buildPosterUri(mContext.getString(R.string.api_poster_default_size));
-        Picasso.with(mContext)
-                .load(posterUri)
-                .into(imageView);
-
-        return imageView;
-    }
 }

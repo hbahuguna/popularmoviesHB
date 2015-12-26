@@ -1,242 +1,136 @@
 package com.himanshubahuguna.android.popularmovieshb;
 
 import android.content.Intent;
-import android.os.AsyncTask;
-import android.preference.PreferenceManager;
+import android.database.Cursor;
+import android.net.Uri;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.GridView;
 import android.widget.ProgressBar;
-import android.widget.Toast;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.himanshubahuguna.android.popularmovieshb.model.Movie;
-import com.himanshubahuguna.android.popularmovieshb.model.MovieDBApiService;
-import com.himanshubahuguna.android.popularmovieshb.model.Result;
-import com.himanshubahuguna.android.popularmovieshb.model.SearchResponse;
+import com.himanshubahuguna.android.popularmovieshb.data.MovieContract;
+import com.himanshubahuguna.android.popularmovieshb.sync.MovieSyncAdapter;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import retrofit.Callback;
-import retrofit.GsonConverterFactory;
-import retrofit.Response;
-import retrofit.Retrofit;
 
 /**
  * A placeholder fragment containing a simple view.
  */
-public class MainActivityFragment extends Fragment {
+public class MainActivityFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor>{
 
-    private ArrayList result = new ArrayList<>();
+    public static final String LOG_TAG = MainActivityFragment.class.getSimpleName();
+    public static final int MOVIE_LOADER = 0;
+    static final int COLUMN_POSTER_PATH = 0 ;
+
+    MovieAdapter movieAdapter;
+    GridView moviesGridView;
 
     public MainActivityFragment() {
+        setHasOptionsMenu(true);
     }
 
-    public static final int MAX_PAGES = 50;
-    private boolean mIsLoading = false;
-    private int mPagesLoaded = 0;
-    // private TextView mProgress;
-    private MovieAdapter mImages;
-    private ProgressBar mProgress;
-
-    private class FetchPageTask extends AsyncTask<Integer, Void, Collection<Movie>> {
-
-        public  final String LOG_TAG = FetchPageTask.class.getSimpleName();
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            mProgress = new ProgressBar(getActivity());
-            mProgress.findViewById(R.id.progress_bar);
-        }
-
-        @Override
-        protected Collection<Movie> doInBackground(Integer... params) {
-            if (params.length == 0) {
-                return null;
-            }
-
-            int page = params[0];
-            final String API_BASE_URL = "http://api.themoviedb.org/3/movie/";
-            final String API_PARAM_PAGE = "page";
-            final String API_PARAM_KEY = "api_key";
-            final String API_SORTING = PreferenceManager
-                    .getDefaultSharedPreferences(getActivity())
-                    .getString(
-                            getString(R.string.pref_sorting_key),
-                            getString(R.string.pref_sorting_default_value)
-                    );
-
-            final Gson gson = new GsonBuilder()
-                    .setDateFormat("yyyy-MM-dd")
-                    .create();
-            final Map<String,Object> queryParams = new HashMap<String,Object>();
-            queryParams.put(API_PARAM_KEY, R.string.api_key);
-            queryParams.put(API_PARAM_PAGE, page);
-            final Retrofit retrofit = new Retrofit.Builder()
-                    .baseUrl(API_BASE_URL)
-                    .addConverterFactory(GsonConverterFactory.create(gson))
-                    .build();
-            final MovieDBApiService movieDBApiService = retrofit.create(MovieDBApiService.class);
-
-            retrofit.Call<SearchResponse> movies = movieDBApiService
-                    .listMovies(API_SORTING, getString(R.string.api_key), page);
-            movies.enqueue(new Callback<SearchResponse>() {
-                @Override
-                public void onResponse(Response<SearchResponse> response, Retrofit retrofit) {
-                    SearchResponse searchResponse = response.body();
-                    for (Result movieResult : searchResponse.getResults()) {
-                        Movie movie = new Movie(movieResult.getId(),
-                                movieResult.getOriginalTitle(),
-                                movieResult.getOverview(),
-                                movieResult.getPosterPath(),
-                                movieResult.getVoteAverage(),
-                                movieResult.getVoteCount(),
-                                movieResult.getReleaseDate()
-                        );
-                        result.add(movie);
-                    }
-                }
-
-                @Override
-                public void onFailure(Throwable t) {
-
-                }
-            });
-
-            return result;
-        }
-
-        @Override
-        protected void onPostExecute(Collection<Movie> xs) {
-            if (xs == null) {
-                Toast.makeText(
-                        getActivity(),
-                        getString(R.string.msg_server_error),
-                        Toast.LENGTH_SHORT
-                ).show();
-
-                stopLoading();
-                return;
-            }
-
-            mPagesLoaded++;
-
-            stopLoading();
-
-            mImages.addAll(xs);
-        }
-
-    }
-
-    private void startLoading() {
-        if (mIsLoading) {
-            return;
-        }
-
-        if (mPagesLoaded >= MAX_PAGES) {
-            return;
-        }
-
-        mIsLoading = true;
-
-        if (mProgress != null) {
-            mProgress.setVisibility(View.VISIBLE);
-        }
-
-        new FetchPageTask().execute(mPagesLoaded + 1);
-    }
-
-    private void stopLoading() {
-        if (!mIsLoading) {
-            return;
-        }
-
-        mIsLoading = false;
-
-        if (mProgress != null) {
-            mProgress.setVisibility(View.GONE);
-        }
+    @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+        getLoaderManager().initLoader(MOVIE_LOADER, null, this);
+        super.onActivityCreated(savedInstanceState);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_main, container, false);
-        mImages = new MovieAdapter(getActivity());
+        View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
-        initGrid(view);
+        moviesGridView = (GridView) rootView.findViewById(R.id.gridview);
 
-        return view;
-    }
+        movieAdapter = new MovieAdapter(getActivity(), null, 0);
 
-    private void initGrid(View view) {
-        GridView gridview = (GridView) view.findViewById(R.id.grid_view);
+        moviesGridView.setAdapter(movieAdapter);
 
-        if (gridview == null) {
-            return;
-        }
-        gridview.setAdapter(mImages);
+        moviesGridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Cursor currentData = (Cursor) parent.getItemAtPosition(position);
+                if (currentData != null) {
+                    Intent detailsIntent = new Intent(getActivity(), MovieDetailsActivity.class);
+                    final int MOVIE_ID_COL = currentData.getColumnIndex(MovieContract.MovieEntry._ID);
+                    Uri movieUri = MovieContract.MovieEntry.buildMovieWithId(currentData.getInt(MOVIE_ID_COL));
 
-        gridview.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            public void onItemClick(AdapterView<?> parent,
-                                    View v,
-                                    int position,
-                                    long id) {
-
-                MovieAdapter adapter = (MovieAdapter) parent.getAdapter();
-                Movie movie = adapter.getItem(position);
-
-                if (movie == null) {
-                    return;
+                    detailsIntent.setData(movieUri);
+                    startActivity(detailsIntent);
                 }
-
-                Intent intent = new Intent(getActivity(), DetailActivity.class);
-                intent.putExtra(Movie.EXTRA_MOVIE, movie.toBundle());
-                getActivity().startActivity(intent);
             }
         });
 
-
-        gridview.setOnScrollListener(
-
-                new AbsListView.OnScrollListener() {
-                    @Override
-                    public void onScrollStateChanged(AbsListView view, int scrollState) {
-
-                    }
-
-                    @Override
-                    public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
-                        int lastInScreen = firstVisibleItem + visibleItemCount;
-                        if (lastInScreen == totalItemCount) {
-                            startLoading();
-                        }
-                    }
-                }
-
-        );
+        return rootView;
     }
 
     @Override
-    public void onResume() {
-        super.onResume();
-
-        startLoading();
-
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        inflater.inflate(R.menu.menu_allmovies, menu);
     }
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int itemId = item.getItemId();
 
+        if (itemId == R.id.action_refresh) {
+            updateMovies();
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        updateMovies();
+    }
+
+    private void updateMovies() {
+        MovieSyncAdapter.syncImmediately(getActivity());
+    }
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        String sortOrderSetting = Utility.getPreferredSortOrder(getActivity());
+        String sortOrder;
+        final int NUMBER_OF_MOVIES = 20;
+
+        if (sortOrderSetting.equals(getString(R.string.pref_sorting_default_value))) {
+            sortOrder = MovieContract.MovieEntry.COLUMN_POPULARITY + " DESC";
+        } else {
+            //sort by rating
+            sortOrder = MovieContract.MovieEntry.COLUMN_VOTE_AVERAGE + " DESC";
+        }
+
+        return new CursorLoader(getActivity(),
+                MovieContract.MovieEntry.CONTENT_URI,
+                new String[]{MovieContract.MovieEntry._ID, MovieContract.MovieEntry.COLUMN_POSTER_PATH},
+                null,
+                null,
+                sortOrder + " LIMIT " + NUMBER_OF_MOVIES);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
+        Log.d(LOG_TAG, "Cursor loaded, " + cursor.getCount() + " rows fetched");
+        movieAdapter.swapCursor(cursor);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        movieAdapter.swapCursor(null);
+    }
 
 }

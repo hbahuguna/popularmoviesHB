@@ -2,7 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.himanshubahuguna.android.popularmovieshb" >
 
+    <!-- required for fetching data from the cloud service -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- required for syncing with the cloud -->
+    <uses-permission android:name="android.permission.READ_SYNC_SETTINGS" />
+    <uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS" />
+    <uses-permission android:name="android.permission.AUTHENTICATE_ACCOUNTS" />
+    <uses-permission android:name="android.permission.GET_ACCOUNTS"/>
+
     <!--
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     -->
@@ -22,6 +29,14 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".MovieDetailsActivity"
+            android:label="@string/activity.details.title"
+            android:parentActivityName=".MainActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+        <activity
             android:name=".SettingsActivity"
             android:label="@string/title_activity_settings"
             android:parentActivityName=".MainActivity" >
@@ -29,14 +44,33 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.himanshubahuguna.android.popularmovieshb.MainActivity" />
         </activity>
-        <activity
-            android:name=".DetailActivity"
-            android:label="@string/title_activity_detail"
-            android:parentActivityName=".MainActivity" >
+
+        <provider
+            android:name=".data.MovieProvider"
+            android:authorities="com.himanshubahuguna.android.popularmovieshb"
+            android:exported="false"
+            android:syncable="true" />
+
+        <service android:name=".sync.MovieAuthService">
+            <intent-filter>
+                <action android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+
             <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.himanshubahuguna.android.popularmovieshb.MainActivity" />
-        </activity>
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator" />
+        </service>
+        <service
+            android:name=".sync.MovieSyncService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.content.SyncAdapter" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.content.SyncAdapter"
+                android:resource="@xml/syncadapter" />
+        </service>
     </application>
 
 

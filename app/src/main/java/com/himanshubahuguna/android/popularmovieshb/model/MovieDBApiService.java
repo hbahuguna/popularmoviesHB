@@ -1,5 +1,6 @@
 package com.himanshubahuguna.android.popularmovieshb.model;
 
+import com.himanshubahuguna.android.popularmovieshb.Config;
 import com.himanshubahuguna.android.popularmovieshb.R;
 
 import java.util.List;
@@ -18,8 +19,11 @@ import retrofit.http.QueryMap;
  * Created by hbahuguna on 11/26/2015.
  */
 public interface MovieDBApiService {
-    @GET("{sorting}")
-    Call<SearchResponse> listMovies(@Path("sorting") String sorting,
-                                    @Query("api_key") String apiKey,
-                                    @Query("page") int page);
+
+    @GET("discover/movie?api_key=" + Config.API_KEY)
+    Call<SearchResponse> getTopMovies(@Query("sort_by") String sortOrder);
+
+    @GET("movie/{id}?api_key=" + Config.API_KEY)
+    Call<MovieRuntime>  getMovieRuntime(@Path("id") int id);
+
 }

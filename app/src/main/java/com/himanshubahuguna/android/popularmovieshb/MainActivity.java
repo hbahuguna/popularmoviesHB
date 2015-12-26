@@ -1,6 +1,7 @@
 package com.himanshubahuguna.android.popularmovieshb;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
@@ -13,17 +14,20 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ProgressBar;
 
-public class MainActivity extends AppCompatActivity  {
+import com.himanshubahuguna.android.popularmovieshb.sync.MovieSyncAdapter;
 
-    private String mSearchType;
+public class MainActivity extends AppCompatActivity  {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        PreferenceManager.setDefaultValues(this, R.xml.pref_main, false);
-
         setContentView(R.layout.activity_main);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        String lastNotificationKey = getString(R.string.prefs_notification_last_key);
+        long lastSyncTime = prefs.getLong(lastNotificationKey, 0L);
+        if (Utility.isOneDayLater(lastSyncTime)) {
+            MovieSyncAdapter.initSyncAdapter(getApplicationContext());
+        }
     }
 
 
@@ -44,6 +48,9 @@ public class MainActivity extends AppCompatActivity  {
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             startActivity(new Intent(this, SettingsActivity.class));
+            return true;
+        } else if (id == R.id.action_favorites) {
+            startActivity(new Intent(this, FavoritesActivity.class));
             return true;
         }
 
