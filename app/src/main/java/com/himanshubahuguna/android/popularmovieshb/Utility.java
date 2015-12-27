@@ -7,10 +7,12 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.preference.PreferenceManager;
 import android.util.Log;
+import android.widget.ArrayAdapter;
 
 import com.himanshubahuguna.android.popularmovieshb.data.MovieContract;
+import com.himanshubahuguna.android.popularmovieshb.model.AllComments;
+import com.himanshubahuguna.android.popularmovieshb.model.AllTrailers;
 import com.himanshubahuguna.android.popularmovieshb.model.Movie;
-import com.himanshubahuguna.android.popularmovieshb.model.Result;
 import com.himanshubahuguna.android.popularmovieshb.model.SearchResponse;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.logging.HttpLoggingInterceptor;
@@ -24,6 +26,7 @@ import java.util.List;
 public class Utility {
 
     public static final String LOG = "Log";
+    public static final String LOG_TAG = Utility.class.getSimpleName();
 
     public static boolean isOneDayLater(long lastTimeStamp){
         final long ONE_DAY = 24 * 60 * 60 * 1000;
@@ -45,7 +48,6 @@ public class Utility {
         for (int i = 0; i < movieListLength; i++) {
             SearchResponse.MovieModel movie = movies.get(i);
             ContentValues cValues = new ContentValues();
-
             cValues.put(MovieContract.MovieEntry.COLUMN_TITLE, movie.getTitle());
             cValues.put(MovieContract.MovieEntry.COLUMN_MOVIE_ID, movie.getMovieId());
             cValues.put(MovieContract.MovieEntry.COLUMN_OVERVIEW, movie.getDescription());
@@ -57,19 +59,56 @@ public class Utility {
             cvList.add(cValues);
         }
 
-        ContentValues[] contentValues = new ContentValues[cvList.size()];
-        cvList.toArray(contentValues);
-        int itemsAdded = context.getContentResolver().bulkInsert(MovieContract.MovieEntry.CONTENT_URI, contentValues);
+        bulkInsert(context, cvList, movieListLength, MovieContract.MovieEntry.CONTENT_URI);
+    }
 
-        if (itemsAdded != movieListLength) {
-            Log.d(LOG, itemsAdded + "/" + movieListLength + " movies inserted");
+    public static void storeCommentsList(Context context, List<AllComments.Comment> comments, int movieId) {
+        ArrayList<ContentValues> contentValues = new ArrayList<ContentValues>();
+        int commentsLength = comments.size();
+        for(int i=0; i < commentsLength; i++) {
+            ContentValues contentValue = new ContentValues();
+            AllComments.Comment comment = comments.get(i);
+            contentValue.put(MovieContract.ReviewEntry.COLUMN_AUTHOR, comment.getAuthor());
+            contentValue.put(MovieContract.ReviewEntry.COLUMN_CONTENT, comment.getContent());
+            contentValue.put(MovieContract.ReviewEntry.COLUMN_REVIEW_ID, comment.getId());
+            contentValue.put(MovieContract.ReviewEntry.COLUMN_MOVIE_ID, movieId);
+            contentValues.add(contentValue);
+        }
+
+        bulkInsert(context, contentValues, commentsLength, MovieContract.ReviewEntry.CONTENT_URI);
+    }
+
+    public static void storeTrailerList(Context context, List<AllTrailers.MovieTrailer> trailers, int movieId) {
+        ArrayList<ContentValues> contentValues = new ArrayList<ContentValues>();
+        int trailersLength = trailers.size();
+        for (int i = 0; i < trailersLength; i++) {
+            ContentValues contentValue = new ContentValues();
+            AllTrailers.MovieTrailer trailer = trailers.get(i);
+            contentValue.put(MovieContract.TrailerEntry.COLUMN_YOUTUBE_KEY, trailer.getKey());
+            contentValue.put(MovieContract.TrailerEntry.COLUMN_TRAILER_ID, trailer.getId());
+            contentValue.put(MovieContract.TrailerEntry.COLUMN_MOVIE_ID, movieId);
+            contentValue.put(MovieContract.TrailerEntry.COLUMN_TITLE, trailer.getTrailerTitle());
+            contentValues.add(contentValue);
+        }
+
+        bulkInsert(context, contentValues, trailersLength, MovieContract.TrailerEntry.CONTENT_URI);
+    }
+
+    private static void bulkInsert(Context context, ArrayList<ContentValues> contentValues, int length, Uri uri) {
+        ContentValues[] contentValuesArray = new ContentValues[contentValues.size()];
+        contentValues.toArray(contentValuesArray);
+
+        int itemsAdded = context.getContentResolver().bulkInsert(uri, contentValuesArray);
+        if (itemsAdded != length) {
+            Log.d(LOG, itemsAdded + "/" + length + " items inserted");
         } else {
             Log.d(LOG, itemsAdded + " records added into the DB");
         }
-
     }
 
     public static String formatReleaseDate(String unformattedReleaseDate) {
+        if(unformattedReleaseDate.equals(""))
+        return "N/A";
         StringBuilder sb = new StringBuilder();
         String[] dateContents = unformattedReleaseDate.split("-");
         sb.append(dateContents[2])

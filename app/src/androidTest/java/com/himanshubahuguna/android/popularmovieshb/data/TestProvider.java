@@ -41,7 +41,7 @@ public class TestProvider extends AndroidTestCase {
     public void testUriMatcher() {
         final String testPoster = "/5JU9ytZJyR3zmClGmVm9q4Geqbd.jpg";
 
-        UriMatcher matcher = MovieProvider.createUriMatcher();
+        UriMatcher matcher = MovieProvider.buildUriMatcher();
 
         assertEquals("CONTENT_URI of MovieEntry should be a Dir",
                 matcher.match(MovieContract.MovieEntry.CONTENT_URI),
@@ -57,7 +57,7 @@ public class TestProvider extends AndroidTestCase {
      */
     public void testInsertionAndQuerying() {
         SQLiteDatabase db = new MovieDbHelper(mContext).getWritableDatabase();
-        UriMatcher matcher = MovieProvider.createUriMatcher();
+        UriMatcher matcher = MovieProvider.buildUriMatcher();
 
         //insert into the table using the content provider
         ContentValues insertedValues = TestUtils.createStubMovie();

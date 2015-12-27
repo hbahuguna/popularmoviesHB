@@ -54,6 +54,27 @@ public class DetailActivityFragment extends Fragment {
         View detailsView = populateDetailsView(detailsCursor);
         mergeAdapter.addView(detailsView);
 
+        Cursor trailerCursor = getActivity().getContentResolver()
+                .query(MovieContract.TrailerEntry.CONTENT_URI,
+                        null,
+                        MovieContract.TrailerEntry.COLUMN_MOVIE_ID + " = ?",
+                        new String[]{String.valueOf(movieId)},
+                        null
+                );
+
+        TrailersAdapter trailersAdapter = new TrailersAdapter(getActivity(), trailerCursor, 0);
+        mergeAdapter.addAdapter(trailersAdapter);
+
+        Cursor commentsCursor = getActivity().getContentResolver().query(
+                MovieContract.ReviewEntry.CONTENT_URI,
+                null, // all columns
+                MovieContract.ReviewEntry.COLUMN_MOVIE_ID + " = ?",
+                new String[]{String.valueOf(movieId)},
+                null);
+
+        CommentsAdapter commentsAdapter = new CommentsAdapter(getActivity(), commentsCursor, 0);
+        mergeAdapter.addAdapter(commentsAdapter);
+
         ListView detailsListView = (ListView) rootView.findViewById(R.id.details_listview);
         detailsListView.setAdapter(mergeAdapter);
 
@@ -130,7 +151,6 @@ public class DetailActivityFragment extends Fragment {
                                 MovieContract.MovieEntry.CONTENT_URI,
                                 addFavorite,
                                 MovieContract.MovieEntry._ID + " = ?",
-//                            new String[]{Integer.toString(movieId)}
                                 new String[]{String.valueOf(_ID)}
                         );
 
@@ -153,7 +173,6 @@ public class DetailActivityFragment extends Fragment {
                                 removeFavorite,
                                 MovieContract.MovieEntry._ID + " = ?",
                                 new String[]{String.valueOf(_ID)}
-//                            new String[]{Integer.toString(movieId)}
                         );
 
                         if (updatedRows < 0) {

@@ -7,5 +7,10 @@
     <dimen name="poster_height">231dp</dimen>
 
     <dimen name="poster_padding">4dp</dimen>
+    <!-- font sizes -->
+    <dimen name="font_larger">28sp</dimen>
+    <dimen name="font_large">22sp</dimen>
+    <dimen name="font_normal">18sp</dimen>
+    <dimen name="font_small">14sp</dimen>
 
 </resources>

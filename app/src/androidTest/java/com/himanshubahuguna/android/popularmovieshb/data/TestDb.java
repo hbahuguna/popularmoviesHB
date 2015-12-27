@@ -32,6 +32,8 @@ public class TestDb extends AndroidTestCase {
         SQLiteDatabase db = movieDbHelper.getReadableDatabase();
         Set<String> tables = new HashSet<String>();
         tables.add(MovieContract.MovieEntry.TABLE_NAME);
+        tables.add(MovieContract.TrailerEntry.TABLE_NAME);
+        tables.add(MovieContract.ReviewEntry.TABLE_NAME);
 
         deleteTheDatabase();
 

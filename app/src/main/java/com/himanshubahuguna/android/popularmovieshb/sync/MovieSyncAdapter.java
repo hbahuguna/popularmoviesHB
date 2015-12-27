@@ -23,13 +23,11 @@ import com.himanshubahuguna.android.popularmovieshb.Config;
 import com.himanshubahuguna.android.popularmovieshb.MainActivity;
 import com.himanshubahuguna.android.popularmovieshb.R;
 import com.himanshubahuguna.android.popularmovieshb.Utility;
-import com.himanshubahuguna.android.popularmovieshb.model.Movie;
+import com.himanshubahuguna.android.popularmovieshb.model.AllComments;
+import com.himanshubahuguna.android.popularmovieshb.model.AllTrailers;
 import com.himanshubahuguna.android.popularmovieshb.model.MovieDBApiService;
 import com.himanshubahuguna.android.popularmovieshb.model.MovieRuntime;
-import com.himanshubahuguna.android.popularmovieshb.model.Result;
 import com.himanshubahuguna.android.popularmovieshb.model.SearchResponse;
-import com.squareup.okhttp.OkHttpClient;
-import com.squareup.okhttp.logging.HttpLoggingInterceptor;
 
 import java.util.List;
 
@@ -104,6 +102,7 @@ public class MovieSyncAdapter extends AbstractThreadedSyncAdapter {
             Retrofit retrofit = new Retrofit.Builder()
                     .baseUrl(Config.API_BASE_URL)
                     .addConverterFactory(GsonConverterFactory.create())
+                    //.client(Utility.httpClient())
                     .build();
             final MovieDBApiService movieDBApiService = retrofit.create(MovieDBApiService.class);
             retrofit.Call<SearchResponse> movies = movieDBApiService
@@ -113,7 +112,11 @@ public class MovieSyncAdapter extends AbstractThreadedSyncAdapter {
                 public void onResponse(Response<SearchResponse> response, Retrofit retrofit) {
                     List<SearchResponse.MovieModel> movieList = response.body().getMovieList();
                     Utility.storeMovieList(getContext(), movieList);
+                    int count = 0;
                     for (final SearchResponse.MovieModel movie : movieList) {
+                        // movie db api has a limit of 40 calls per 10 seconds
+                        if(count++ >= 13)
+                        break;
                         movieDBApiService.getMovieRuntime(movie.getMovieId()).enqueue(new Callback<MovieRuntime>() {
                             @Override
                             public void onResponse(Response<MovieRuntime> runtime, Retrofit retrofit) {
@@ -122,7 +125,31 @@ public class MovieSyncAdapter extends AbstractThreadedSyncAdapter {
 
                             @Override
                             public void onFailure(Throwable t) {
-                                Log.e("SyncAdapter", "Error: " + t.getMessage());
+                                Log.e("SyncAdapter", "Error updatiing movie runtime: " + t.getMessage());
+                            }
+                        });
+                        movieDBApiService.getMovieReviews(movie.getMovieId()).enqueue(new Callback<AllComments>() {
+                            @Override
+                            public void onResponse(Response<AllComments> response, Retrofit retrofit) {
+                                List<AllComments.Comment> commentList = response.body().getCommentList();
+                                Utility.storeCommentsList(getContext(), commentList, movie.getMovieId());
+                            }
+
+                            @Override
+                            public void onFailure(Throwable t) {
+                                Log.e("SyncAdapter", "Error inserting comments: " + t.getMessage());
+                            }
+                        });
+                        movieDBApiService.getMovieTrailers(movie.getMovieId()).enqueue(new Callback<AllTrailers>() {
+                            @Override
+                            public void onResponse(Response<AllTrailers> response, Retrofit retrofit) {
+                                List<AllTrailers.MovieTrailer> trailerList = response.body().getTrailerList();
+                                Utility.storeTrailerList(getContext(), trailerList, movie.getMovieId());
+                            }
+
+                            @Override
+                            public void onFailure(Throwable t) {
+                                Log.e("SyncAdapter", "Error inserting trailers: " + t.getMessage());
                             }
                         });
                     }

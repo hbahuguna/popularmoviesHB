@@ -21,9 +21,16 @@ import retrofit.http.QueryMap;
 public interface MovieDBApiService {
 
     @GET("discover/movie?api_key=" + Config.API_KEY)
-    Call<SearchResponse> getTopMovies(@Query("sort_by") String sortOrder);
+    Call<SearchResponse> getTopMovies(@Query("sortby") String sortOrder);
 
     @GET("movie/{id}?api_key=" + Config.API_KEY)
     Call<MovieRuntime>  getMovieRuntime(@Path("id") int id);
+
+    @GET("movie/{id}/reviews?api_key=" + Config.API_KEY)
+    Call<AllComments> getMovieReviews(@Path("id") int id);
+
+    @GET("movie/{id}/videos?api_key=" + Config.API_KEY)
+    Call<AllTrailers> getMovieTrailers(@Path("id") int id);
+
 
 }
