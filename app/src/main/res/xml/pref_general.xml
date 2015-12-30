@@ -1,0 +1,18 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <ListPreference
+        android:defaultValue="@string/prefs.sort.default_value"
+        android:entries="@array/movie_sort_entries"
+        android:entryValues="@array/movie_sorting_keys"
+        android:key="sorting_type"
+        android:title="@string/prefs.sort.title" />
+
+    <CheckBoxPreference
+        android:defaultValue="true"
+        android:key="@string/prefs.notification.key"
+        android:summaryOff="@string/prefs.notification.summary.off"
+        android:summaryOn="@string/prefs.notification.summary.on"
+        android:title="@string/prefs.notification.title" />
+
+
+</PreferenceScreen>

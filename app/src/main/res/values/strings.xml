@@ -26,6 +26,7 @@
     <string name="prefs.notification.summary.off">Don\'t show notifications</string>
     <string name="prefs.notification.summary.on">Show notifications</string>
     <string name="prefs.notification.last.key">last_notification</string>
+    <string name="prefs.sort.default_value">popularity</string>
 
     <string name="notification.content">Did you check the new movies today?</string>
 
@@ -59,5 +60,17 @@
     <string name="details.button.favorite.add">Mark as favorite</string>
     <string name="details.button.favorite.remove">Unmark as favorite</string>
     <string name="details.trailers.header">Trailers: </string>
+
+    <!-- Settings key-value pairs -->
+    <string name="prefs.sort.key" translatable="false">sorting_type</string>
+    <string name="prefs.sort.title">Sort movies by</string>
+    <string-array name="movie_sorting_keys" translatable="false">
+        <item>popularity</item>
+        <item>high_rated</item>
+    </string-array>
+    <string-array name="movie_sort_entries">
+        <item>Most popular</item>
+        <item>Highest rated</item>
+    </string-array>
 
 </resources>
