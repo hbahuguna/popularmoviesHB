@@ -26,6 +26,9 @@ import java.util.Collection;
 public class MovieAdapter extends CursorAdapter {
 
     public static final String LOG_TAG = MovieAdapter.class.getSimpleName();
+    private static final int VIEW_TYPE_COUNT = 2;
+    private static final int VIEW_TYPE_ = 0;
+    private static final int VIEW_TYPE_FUTURE_DAY = 1;
 
     public MovieAdapter(Context context, Cursor cursor, int flags) {
         super(context, cursor, flags);

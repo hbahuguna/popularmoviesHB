@@ -36,6 +36,13 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
     MovieAdapter movieAdapter;
     GridView moviesGridView;
 
+    public interface Callback {
+        /**
+         * DetailFragmentCallback for when an item has been selected.
+         */
+        public void onItemSelected(Uri movieUri);
+    }
+
     public MainActivityFragment() {
         setHasOptionsMenu(true);
     }
@@ -65,9 +72,8 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
                     Intent detailsIntent = new Intent(getActivity(), MovieDetailsActivity.class);
                     final int MOVIE_ID_COL = currentData.getColumnIndex(MovieContract.MovieEntry._ID);
                     Uri movieUri = MovieContract.MovieEntry.buildMovieWithId(currentData.getInt(MOVIE_ID_COL));
-
-                    detailsIntent.setData(movieUri);
-                    startActivity(detailsIntent);
+                    ((Callback) getActivity())
+                            .onItemSelected(movieUri);
                 }
             }
         });

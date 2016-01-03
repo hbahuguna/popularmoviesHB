@@ -30,55 +30,70 @@ import com.squareup.picasso.Picasso;
 public class DetailActivityFragment extends Fragment {
 
     public static final String LOG_TAG = DetailActivityFragment.class.getSimpleName();
+    static final String DETAIL_URI = "URI";
+    private Uri mUri;
 
     public DetailActivityFragment() {
+        setHasOptionsMenu(true);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
-        Intent intent = getActivity().getIntent();
-        if (intent == null) {
-            return null;
-        }
+            View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
+            Intent intent = getActivity().getIntent();
+            if (intent == null) {
+                return null;
+            }
 
-        MergeAdapter mergeAdapter = new MergeAdapter();
+            Bundle arguments = getArguments();
+            if (arguments != null) {
+                mUri = arguments.getParcelable(DetailActivityFragment.DETAIL_URI);
+                Log.d(LOG_TAG, "mUri " + mUri);
+            }
 
-        Uri movieUri = intent.getData();
-        int movieId = Utility.fetchMovieIdFromUri(getActivity(), movieUri);
+            if (mUri == null) {
+                mUri = intent.getData();
+            }
 
-        Cursor detailsCursor = getActivity().getContentResolver()
-                .query(movieUri, null, null, null, null);
+            if (mUri == null) {
+                return rootView;
+            }
 
-        View detailsView = populateDetailsView(detailsCursor);
-        mergeAdapter.addView(detailsView);
+            MergeAdapter mergeAdapter = new MergeAdapter();
+            int movieId = Utility.fetchMovieIdFromUri(getActivity(), mUri);
 
-        Cursor trailerCursor = getActivity().getContentResolver()
-                .query(MovieContract.TrailerEntry.CONTENT_URI,
-                        null,
-                        MovieContract.TrailerEntry.COLUMN_MOVIE_ID + " = ?",
-                        new String[]{String.valueOf(movieId)},
-                        null
-                );
+            Cursor detailsCursor = getActivity().getContentResolver()
+                    .query(mUri, null, null, null, null);
 
-        TrailersAdapter trailersAdapter = new TrailersAdapter(getActivity(), trailerCursor, 0);
-        mergeAdapter.addAdapter(trailersAdapter);
+            View detailsView = populateDetailsView(detailsCursor);
+            mergeAdapter.addView(detailsView);
 
-        Cursor commentsCursor = getActivity().getContentResolver().query(
-                MovieContract.ReviewEntry.CONTENT_URI,
-                null, // all columns
-                MovieContract.ReviewEntry.COLUMN_MOVIE_ID + " = ?",
-                new String[]{String.valueOf(movieId)},
-                null);
+            Cursor trailerCursor = getActivity().getContentResolver()
+                    .query(MovieContract.TrailerEntry.CONTENT_URI,
+                            null,
+                            MovieContract.TrailerEntry.COLUMN_MOVIE_ID + " = ?",
+                            new String[]{String.valueOf(movieId)},
+                            null
+                    );
 
-        CommentsAdapter commentsAdapter = new CommentsAdapter(getActivity(), commentsCursor, 0);
-        mergeAdapter.addAdapter(commentsAdapter);
+            TrailersAdapter trailersAdapter = new TrailersAdapter(getActivity(), trailerCursor, 0);
+            mergeAdapter.addAdapter(trailersAdapter);
 
-        ListView detailsListView = (ListView) rootView.findViewById(R.id.details_listview);
-        detailsListView.setAdapter(mergeAdapter);
+            Cursor commentsCursor = getActivity().getContentResolver().query(
+                    MovieContract.ReviewEntry.CONTENT_URI,
+                    null, // all columns
+                    MovieContract.ReviewEntry.COLUMN_MOVIE_ID + " = ?",
+                    new String[]{String.valueOf(movieId)},
+                    null);
 
-        return rootView;
+            CommentsAdapter commentsAdapter = new CommentsAdapter(getActivity(), commentsCursor, 0);
+            mergeAdapter.addAdapter(commentsAdapter);
+
+            ListView detailsListView = (ListView) rootView.findViewById(R.id.details_listview);
+            detailsListView.setAdapter(mergeAdapter);
+
+            return rootView;
     }
 
 
