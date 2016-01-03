@@ -31,7 +31,6 @@
     <string name="notification.content">Did you check the new movies today?</string>
 
     <!-- api -->
-    <string name="api_key">c4b2831b4d3c932c6cde4ac5eae5d616</string>
     <string name="api_poster_default_size">w154</string>
     <string name="api_base_url">http://api.themoviedb.org/3</string>
     <string name="api.image.size.default" translatable="false">w185</string>
