@@ -16,6 +16,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ProgressBar;
 
+import com.facebook.stetho.Stetho;
 import com.himanshubahuguna.android.popularmovieshb.sync.MovieSyncAdapter;
 
 public class MainActivity extends AppCompatActivity implements MainActivityFragment.Callback {
@@ -26,6 +27,11 @@ public class MainActivity extends AppCompatActivity implements MainActivityFragm
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Stetho.initialize(
+                Stetho.newInitializerBuilder(this)
+                        .enableDumpapp(Stetho.defaultDumperPluginsProvider(this))
+                        .enableWebKitInspector(Stetho.defaultInspectorModulesProvider(this))
+                        .build());
         if(savedInstanceState == null) {
             setContentView(R.layout.activity_main);
             if (findViewById(R.id.movie_detail_container) != null) {

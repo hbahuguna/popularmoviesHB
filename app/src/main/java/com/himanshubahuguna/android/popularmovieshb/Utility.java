@@ -9,6 +9,7 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 import android.widget.ArrayAdapter;
 
+import com.facebook.stetho.okhttp.StethoInterceptor;
 import com.himanshubahuguna.android.popularmovieshb.data.MovieContract;
 import com.himanshubahuguna.android.popularmovieshb.model.AllComments;
 import com.himanshubahuguna.android.popularmovieshb.model.AllTrailers;
@@ -19,7 +20,7 @@ import com.squareup.okhttp.logging.HttpLoggingInterceptor;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import com.facebook.stetho.Stetho;
 /**
  * Created by hbahuguna on 12/20/2015.
  */
@@ -171,7 +172,7 @@ public class Utility {
         OkHttpClient httpClient = new OkHttpClient();
 // add your other interceptors …
 // add logging as last interceptor
-        httpClient.interceptors().add(logging);
+        httpClient.networkInterceptors().add(new StethoInterceptor());
         return httpClient;
     }
 }

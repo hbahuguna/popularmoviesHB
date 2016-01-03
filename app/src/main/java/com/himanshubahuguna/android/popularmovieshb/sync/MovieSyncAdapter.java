@@ -102,7 +102,7 @@ public class MovieSyncAdapter extends AbstractThreadedSyncAdapter {
             Retrofit retrofit = new Retrofit.Builder()
                     .baseUrl(Config.API_BASE_URL)
                     .addConverterFactory(GsonConverterFactory.create())
-                    //.client(Utility.httpClient())
+                    .client(Utility.httpClient())
                     .build();
             final MovieDBApiService movieDBApiService = retrofit.create(MovieDBApiService.class);
             retrofit.Call<SearchResponse> movies = movieDBApiService
