@@ -115,8 +115,15 @@ public class MovieSyncAdapter extends AbstractThreadedSyncAdapter {
                     int count = 0;
                     for (final SearchResponse.MovieModel movie : movieList) {
                         // movie db api has a limit of 40 calls per 10 seconds
-                        if(count++ >= 13)
-                        break;
+                        if(count++ >= 8){
+                            try {
+                                Thread.sleep(10000);
+                                count = 0;
+                            } catch (InterruptedException e) {
+                                Log.e(LOG_TAG, e.getMessage());
+                            }
+                        }
+
                         movieDBApiService.getMovieRuntime(movie.getMovieId()).enqueue(new Callback<MovieRuntime>() {
                             @Override
                             public void onResponse(Response<MovieRuntime> runtime, Retrofit retrofit) {
