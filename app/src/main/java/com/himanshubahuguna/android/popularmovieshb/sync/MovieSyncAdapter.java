@@ -4,6 +4,7 @@ import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.UiAutomation;
 import android.content.ContentProviderClient;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -30,6 +31,7 @@ import com.himanshubahuguna.android.popularmovieshb.model.MovieRuntime;
 import com.himanshubahuguna.android.popularmovieshb.model.SearchResponse;
 
 import java.util.List;
+import java.util.concurrent.Executors;
 
 import retrofit.Callback;
 import retrofit.GsonConverterFactory;
@@ -99,12 +101,7 @@ public class MovieSyncAdapter extends AbstractThreadedSyncAdapter {
     public void onPerformSync(Account account, Bundle extras, String authority, ContentProviderClient provider, SyncResult result) {
         if (Utility.isOneDayLater(lastSyncTime)) {
             String sortOrder = Utility.getPreferredSortOrder(getContext());
-            Retrofit retrofit = new Retrofit.Builder()
-                    .baseUrl(Config.API_BASE_URL)
-                    .addConverterFactory(GsonConverterFactory.create())
-                    .client(Utility.httpClient())
-                    .build();
-            final MovieDBApiService movieDBApiService = retrofit.create(MovieDBApiService.class);
+            final MovieDBApiService movieDBApiService = Utility.movieDBApiService();
             retrofit.Call<SearchResponse> movies = movieDBApiService
                     .getTopMovies(sortOrder);
             movies.enqueue(new Callback<SearchResponse>() {
@@ -112,18 +109,7 @@ public class MovieSyncAdapter extends AbstractThreadedSyncAdapter {
                 public void onResponse(Response<SearchResponse> response, Retrofit retrofit) {
                     List<SearchResponse.MovieModel> movieList = response.body().getMovieList();
                     Utility.storeMovieList(getContext(), movieList);
-                    int count = 0;
-                    for (final SearchResponse.MovieModel movie : movieList) {
-                        // movie db api has a limit of 40 calls per 10 seconds
-                        if(count++ >= 8){
-                            try {
-                                Thread.sleep(10000);
-                                count = 0;
-                            } catch (InterruptedException e) {
-                                Log.e(LOG_TAG, e.getMessage());
-                            }
-                        }
-
+                    /*for (final SearchResponse.MovieModel movie : movieList) {
                         movieDBApiService.getMovieRuntime(movie.getMovieId()).enqueue(new Callback<MovieRuntime>() {
                             @Override
                             public void onResponse(Response<MovieRuntime> runtime, Retrofit retrofit) {
@@ -159,7 +145,7 @@ public class MovieSyncAdapter extends AbstractThreadedSyncAdapter {
                                 Log.e("SyncAdapter", "Error inserting trailers: " + t.getMessage());
                             }
                         });
-                    }
+                    }*/
                     sendNotification();
                 }
 

@@ -14,6 +14,7 @@ import com.himanshubahuguna.android.popularmovieshb.data.MovieContract;
 import com.himanshubahuguna.android.popularmovieshb.model.AllComments;
 import com.himanshubahuguna.android.popularmovieshb.model.AllTrailers;
 import com.himanshubahuguna.android.popularmovieshb.model.Movie;
+import com.himanshubahuguna.android.popularmovieshb.model.MovieDBApiService;
 import com.himanshubahuguna.android.popularmovieshb.model.SearchResponse;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.logging.HttpLoggingInterceptor;
@@ -21,6 +22,10 @@ import com.squareup.okhttp.logging.HttpLoggingInterceptor;
 import java.util.ArrayList;
 import java.util.List;
 import com.facebook.stetho.Stetho;
+
+import retrofit.GsonConverterFactory;
+import retrofit.Retrofit;
+
 /**
  * Created by hbahuguna on 12/20/2015.
  */
@@ -28,6 +33,7 @@ public class Utility {
 
     public static final String LOG = "Log";
     public static final String LOG_TAG = Utility.class.getSimpleName();
+    public static final int TMDB_OPTIMIZED_SLEEP_TIME = 800;
 
     public static boolean isOneDayLater(long lastTimeStamp){
         final long ONE_DAY = 24 * 60 * 60 * 1000;
@@ -123,12 +129,18 @@ public class Utility {
         ContentValues values = new ContentValues();
         values.put(MovieContract.MovieEntry.COLUMN_RUNTIME, runtime);
 
-        return context.getContentResolver().update(
+        int upadted = context.getContentResolver().update(
                 MovieContract.MovieEntry.CONTENT_URI,
                 values,
                 MovieContract.MovieEntry.COLUMN_MOVIE_ID + "= ?",
                 new String[]{Integer.toString(movieId)}
         );
+        try {
+            Thread.sleep(260);
+        } catch (InterruptedException e) {
+            Log.e(LOG_TAG, e.getMessage());
+        }
+        return upadted;
     }
 
     public static int fetchMovieIdFromUri(Context context, Uri movieUri) {
@@ -172,7 +184,24 @@ public class Utility {
         OkHttpClient httpClient = new OkHttpClient();
 // add your other interceptors …
 // add logging as last interceptor
-        httpClient.networkInterceptors().add(new StethoInterceptor());
+        httpClient.networkInterceptors().add(logging);
         return httpClient;
+    }
+
+    public static void waitBeforeNextRequest() {
+        try {
+            Thread.sleep(TMDB_OPTIMIZED_SLEEP_TIME);
+        } catch (InterruptedException e) {
+            Log.e(LOG_TAG, e.getMessage());
+        }
+    }
+
+    public static MovieDBApiService movieDBApiService() {
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(Config.API_BASE_URL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .client(httpClient())
+                .build();
+        return retrofit.create(MovieDBApiService.class);
     }
 }

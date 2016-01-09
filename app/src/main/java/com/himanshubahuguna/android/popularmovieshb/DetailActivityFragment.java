@@ -7,6 +7,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
@@ -14,7 +15,9 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CursorAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -22,25 +25,55 @@ import android.widget.TextView;
 import com.commonsware.cwac.merge.MergeAdapter;
 
 import com.himanshubahuguna.android.popularmovieshb.data.MovieContract;
+import com.himanshubahuguna.android.popularmovieshb.model.AllComments;
+import com.himanshubahuguna.android.popularmovieshb.model.AllTrailers;
+import com.himanshubahuguna.android.popularmovieshb.model.MovieDBApiService;
+import com.himanshubahuguna.android.popularmovieshb.model.MovieRuntime;
 import com.squareup.picasso.Picasso;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import retrofit.Callback;
+import retrofit.Response;
+import retrofit.Retrofit;
 
 /**
  * Created by hbahuguna on 11/24/2015.
  */
-public class DetailActivityFragment extends Fragment {
+public class DetailActivityFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor>{
 
     public static final String LOG_TAG = DetailActivityFragment.class.getSimpleName();
     static final String DETAIL_URI = "URI";
+    public static final int TRAILER_LOADER = 0;
+    public static final int COMMENT_LOADER = 1;
+    public static final int RUNTIME_LOADER = 2;
     private Uri mUri;
+    View rootView;
+    MergeAdapter mergeAdapter = new MergeAdapter();
+    TrailersAdapter trailersAdapter;
+    CommentsAdapter commentsAdapter;
+    ListView detailsListView;
+    int movieId;
+    Cursor trailerCursor;
+    Cursor commentsCursor;
 
     public DetailActivityFragment() {
         setHasOptionsMenu(true);
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public void onActivityCreated(Bundle savedInstanceState) {
+        getLoaderManager().initLoader(TRAILER_LOADER, null, this);
+        getLoaderManager().initLoader(COMMENT_LOADER, null, this);
+        getLoaderManager().initLoader(RUNTIME_LOADER, null, this);
+        super.onActivityCreated(savedInstanceState);
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, final ViewGroup container,
                              Bundle savedInstanceState) {
-            View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
+            final View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
             Intent intent = getActivity().getIntent();
             if (intent == null) {
                 return null;
@@ -60,37 +93,74 @@ public class DetailActivityFragment extends Fragment {
                 return rootView;
             }
 
-            MergeAdapter mergeAdapter = new MergeAdapter();
-            int movieId = Utility.fetchMovieIdFromUri(getActivity(), mUri);
-
             Cursor detailsCursor = getActivity().getContentResolver()
-                    .query(mUri, null, null, null, null);
+                .query(mUri, null, null, null, null);
 
             View detailsView = populateDetailsView(detailsCursor);
             mergeAdapter.addView(detailsView);
+            movieId = Utility.fetchMovieIdFromUri(getActivity(), mUri);
 
-            Cursor trailerCursor = getActivity().getContentResolver()
-                    .query(MovieContract.TrailerEntry.CONTENT_URI,
-                            null,
-                            MovieContract.TrailerEntry.COLUMN_MOVIE_ID + " = ?",
-                            new String[]{String.valueOf(movieId)},
-                            null
-                    );
+            final MovieDBApiService movieDBApiService = Utility.movieDBApiService();
 
-            TrailersAdapter trailersAdapter = new TrailersAdapter(getActivity(), trailerCursor, 0);
-            mergeAdapter.addAdapter(trailersAdapter);
+            movieDBApiService.getMovieRuntime(movieId).enqueue(new Callback<MovieRuntime>() {
+                @Override
+                public void onResponse(Response<MovieRuntime> runtime, Retrofit retrofit) {
+                    Utility.updateMovieWithRuntime(getContext(), movieId, runtime.body().getRuntime());
+                }
 
-            Cursor commentsCursor = getActivity().getContentResolver().query(
-                    MovieContract.ReviewEntry.CONTENT_URI,
-                    null, // all columns
-                    MovieContract.ReviewEntry.COLUMN_MOVIE_ID + " = ?",
-                    new String[]{String.valueOf(movieId)},
-                    null);
+                @Override
+                public void onFailure(Throwable t) {
+                    Log.e("SyncAdapter", "Error updatiing movie runtime: " + t.getMessage());
+                }
+            });
 
-            CommentsAdapter commentsAdapter = new CommentsAdapter(getActivity(), commentsCursor, 0);
+            movieDBApiService.getMovieTrailers(movieId).enqueue(new Callback<AllTrailers>() {
+                @Override
+                public void onResponse(Response<AllTrailers> response, Retrofit retrofit) {
+                    List<AllTrailers.MovieTrailer> trailerList = response.body().getTrailerList();
+                    Utility.storeTrailerList(getContext(), trailerList, movieId);
+                }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    Log.e("SyncAdapter", "Error inserting trailers: " + t.getMessage());
+                }
+            });
+
+            trailerCursor = getActivity().getContentResolver()
+                .query(MovieContract.TrailerEntry.CONTENT_URI,
+                        null,
+                        MovieContract.TrailerEntry.COLUMN_MOVIE_ID + " = ?",
+                        new String[]{String.valueOf(movieId)},
+                        null
+                );
+        trailersAdapter = new TrailersAdapter(getActivity(), trailerCursor, 0);
+        mergeAdapter.addAdapter(trailersAdapter);
+
+        movieDBApiService.getMovieReviews(movieId).enqueue(new Callback<AllComments>() {
+            @Override
+            public void onResponse(Response<AllComments> response, Retrofit retrofit) {
+                List<AllComments.Comment> commentList = response.body().getCommentList();
+                Utility.storeCommentsList(getContext(), commentList, movieId);
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                Log.e("SyncAdapter", "Error inserting comments: " + t.getMessage());
+            }
+        });
+
+            commentsCursor = getActivity().getContentResolver().query(
+                MovieContract.ReviewEntry.CONTENT_URI,
+                null, // all columns
+                MovieContract.ReviewEntry.COLUMN_MOVIE_ID + " = ?",
+                new String[]{String.valueOf(movieId)},
+                null);
+
+            commentsAdapter = new CommentsAdapter(getActivity(), commentsCursor, 0);
             mergeAdapter.addAdapter(commentsAdapter);
 
-            ListView detailsListView = (ListView) rootView.findViewById(R.id.details_listview);
+            detailsListView = (ListView) rootView.findViewById(R.id.details_listview);
             detailsListView.setAdapter(mergeAdapter);
 
             return rootView;
@@ -207,4 +277,65 @@ public class DetailActivityFragment extends Fragment {
 
         return view;
     }
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        CursorLoader loader = null;
+        if (id == TRAILER_LOADER) {
+            loader = new CursorLoader(getActivity(),
+                    MovieContract.TrailerEntry.CONTENT_URI,
+                    null,
+                    MovieContract.TrailerEntry.COLUMN_MOVIE_ID + " = ?",
+                    new String[]{String.valueOf(movieId)},
+                    null);
+        } else if(id == COMMENT_LOADER) {
+            loader = new CursorLoader(getActivity(),
+                    MovieContract.ReviewEntry.CONTENT_URI,
+                    null,
+                    MovieContract.ReviewEntry.COLUMN_MOVIE_ID + " = ?",
+                    new String[]{String.valueOf(movieId)},
+                    null);
+        } else if(id == RUNTIME_LOADER) {
+            loader = new CursorLoader(getActivity(),
+                    MovieContract.MovieEntry.CONTENT_URI,
+                    new String[] {MovieContract.MovieEntry.COLUMN_RUNTIME},
+                    MovieContract.ReviewEntry.COLUMN_MOVIE_ID + " = ?",
+                    new String[]{String.valueOf(movieId)},
+                    null);
+        }
+        return loader;
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
+            switch (loader.getId()) {
+                case TRAILER_LOADER:
+                    trailersAdapter = new TrailersAdapter(getActivity(), trailerCursor, 0);
+                    trailersAdapter.swapCursor(cursor);
+                    mergeAdapter.addAdapter(trailersAdapter);
+                    break;
+                case COMMENT_LOADER:
+                    commentsAdapter = new CommentsAdapter(getActivity(), commentsCursor, 0);
+                    commentsAdapter.swapCursor(cursor);
+                    mergeAdapter.addAdapter(commentsAdapter);
+                    break;
+                default:
+                    break;
+            }
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        switch (loader.getId()) {
+            case TRAILER_LOADER:
+                trailersAdapter.swapCursor(null);
+                break;
+            case COMMENT_LOADER:
+                commentsAdapter.swapCursor(null);
+                break;
+            default:
+                break;
+        }
+    }
+
 }
