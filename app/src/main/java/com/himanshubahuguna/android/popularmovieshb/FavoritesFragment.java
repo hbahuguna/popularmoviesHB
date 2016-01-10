@@ -30,6 +30,13 @@ public class FavoritesFragment extends Fragment implements LoaderManager.LoaderC
     public FavoritesFragment() {
     }
 
+    public interface Callback {
+        /**
+         * DetailFragmentCallback for when an item has been selected.
+         */
+        public void onItemSelected(Uri movieUri);
+    }
+
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         getLoaderManager().initLoader(FAVORITE_LOADER, null, this);
@@ -51,12 +58,11 @@ public class FavoritesFragment extends Fragment implements LoaderManager.LoaderC
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Cursor currentData = (Cursor) parent.getItemAtPosition(position);
                 if (currentData != null) {
-                    Intent detailsIntent = new Intent(getActivity(), MovieDetailsActivity.class);
                     final int MOVIE_ID_COL = currentData.getColumnIndex(MovieContract.MovieEntry._ID);
                     Uri movieUri = MovieContract.MovieEntry.buildMovieWithId(currentData.getInt(MOVIE_ID_COL));
 
-                    detailsIntent.setData(movieUri);
-                    startActivity(detailsIntent);
+                    ((Callback) getActivity())
+                            .onItemSelected(movieUri);
                 }
             }
         });

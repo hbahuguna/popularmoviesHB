@@ -36,7 +36,6 @@ public class TrailersAdapter extends CursorAdapter {
         int trailerTitleColumn = cursor.getColumnIndex(MovieContract.TrailerEntry.COLUMN_TITLE);
         String trailerTitle = cursor.getString(trailerTitleColumn);
         trailerTitleTextView.setText(trailerTitle);
-        Log.d(LOG_TAG, "#########" + trailerTitle);
 
         view.setOnClickListener(new View.OnClickListener() {
             @Override

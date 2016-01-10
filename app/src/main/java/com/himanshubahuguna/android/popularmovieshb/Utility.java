@@ -1,11 +1,18 @@
 package com.himanshubahuguna.android.popularmovieshb;
 
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.preference.PreferenceManager;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.TaskStackBuilder;
 import android.util.Log;
 import android.widget.ArrayAdapter;
 
@@ -33,9 +40,9 @@ public class Utility {
 
     public static final String LOG = "Log";
     public static final String LOG_TAG = Utility.class.getSimpleName();
-    public static final int TMDB_OPTIMIZED_SLEEP_TIME = 800;
+    private static final int MOVIE_NOTIFICATION_ID = 1001;
 
-    public static boolean isOneDayLater(long lastTimeStamp){
+    public static boolean isOneDayLater(long lastTimeStamp) {
         final long ONE_DAY = 24 * 60 * 60 * 1000;
         long now = System.currentTimeMillis();
         return (now - lastTimeStamp > ONE_DAY);
@@ -72,7 +79,7 @@ public class Utility {
     public static void storeCommentsList(Context context, List<AllComments.Comment> comments, int movieId) {
         ArrayList<ContentValues> contentValues = new ArrayList<ContentValues>();
         int commentsLength = comments.size();
-        for(int i=0; i < commentsLength; i++) {
+        for (int i = 0; i < commentsLength; i++) {
             ContentValues contentValue = new ContentValues();
             AllComments.Comment comment = comments.get(i);
             contentValue.put(MovieContract.ReviewEntry.COLUMN_AUTHOR, comment.getAuthor());
@@ -114,8 +121,8 @@ public class Utility {
     }
 
     public static String formatReleaseDate(String unformattedReleaseDate) {
-        if(unformattedReleaseDate.equals(""))
-        return "N/A";
+        if (unformattedReleaseDate.equals(""))
+            return "N/A";
         StringBuilder sb = new StringBuilder();
         String[] dateContents = unformattedReleaseDate.split("-");
         sb.append(dateContents[2])
@@ -177,7 +184,7 @@ public class Utility {
         return sb.toString();
     }
 
-    public static OkHttpClient httpClient () {
+    public static OkHttpClient httpClient() {
         HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
 // set your desired log level
         logging.setLevel(HttpLoggingInterceptor.Level.BODY);
@@ -188,14 +195,6 @@ public class Utility {
         return httpClient;
     }
 
-    public static void waitBeforeNextRequest() {
-        try {
-            Thread.sleep(TMDB_OPTIMIZED_SLEEP_TIME);
-        } catch (InterruptedException e) {
-            Log.e(LOG_TAG, e.getMessage());
-        }
-    }
-
     public static MovieDBApiService movieDBApiService() {
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(Config.API_BASE_URL)
@@ -203,5 +202,55 @@ public class Utility {
                 .client(httpClient())
                 .build();
         return retrofit.create(MovieDBApiService.class);
+    }
+
+    public static void sendNotification(Context context, long lastSyncTime) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        boolean displayNotifications = prefs.getBoolean(context.getString(R.string.prefs_notification_key), true);
+
+        if (!displayNotifications) {
+            return;
+        }
+
+        String lastNotificationKey = context.getString(R.string.prefs_notification_last_key);
+        lastSyncTime = prefs.getLong(lastNotificationKey, 0);
+
+        if (isOneDayLater(lastSyncTime)) {
+            //Show notification
+
+            int smallIcon = R.mipmap.ic_launcher;
+            Bitmap largeIcon = BitmapFactory.decodeResource(
+                    context.getResources(),
+                    R.mipmap.ic_launcher);
+
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(context)
+                    .setSmallIcon(smallIcon)
+                    .setLargeIcon(largeIcon)
+                    .setContentTitle(context.getString(R.string.app_name))
+                    .setContentText(context.getString(R.string.notification_content));
+
+            Intent notificationIntent = new Intent(context, MainActivity.class);
+
+            // The stack builder object will contain an artificial back stack for the
+            // started Activity.
+            // This ensures that navigating backward from the Activity leads out of
+            // your application to the Home screen.
+            TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
+            stackBuilder.addNextIntent(notificationIntent);
+            PendingIntent resultPendingIntent =
+                    stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+
+            builder.setContentIntent(resultPendingIntent);
+
+            NotificationManager notificationManager =
+                    (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+
+            notificationManager.notify(MOVIE_NOTIFICATION_ID, builder.build()); //notify
+
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putLong(lastNotificationKey, System.currentTimeMillis());
+            editor.apply();
+        }
+
     }
 }

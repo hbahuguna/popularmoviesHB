@@ -41,7 +41,6 @@
 
     <!-- syncing -->
     <string name="content.authority">com.himanshubahuguna.android.popularmovieshb</string>
-    <string name="sync.account.type">com.foo</string>
 
     <!-- Menu entries -->
     <string name="menu.settings">Settings</string>

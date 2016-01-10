@@ -69,6 +69,15 @@
                 android:name="android.accounts.AccountAuthenticator"
                 android:resource="@xml/authenticator" />
         </service>
+        <service android:name=".sync.ReviewsTrailersAuthService">
+            <intent-filter>
+                <action android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator_reviews_trailers" />
+        </service>
         <service
             android:name=".sync.MovieSyncService"
             android:exported="true">
@@ -78,7 +87,18 @@
 
             <meta-data
                 android:name="android.content.SyncAdapter"
-                android:resource="@xml/syncadapter" />
+                android:resource="@xml/syncadapter_movies" />
+        </service>
+        <service
+            android:name=".sync.ReviewsTrailersSyncService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.content.SyncAdapter" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.content.SyncAdapter"
+                android:resource="@xml/syncadapter_reviews_trailers" />
         </service>
     </application>
 

@@ -47,11 +47,14 @@ public class MovieSyncAdapter extends AbstractThreadedSyncAdapter {
     public static final String LOG_TAG = MovieSyncAdapter.class.getSimpleName();
 
     public static final int SYNC_INTERVAL = 60 * 60 * 10; // 10 hours
-    private static final int MOVIE_NOTIFICATION_ID = 1001;
     private static long lastSyncTime = 0L;
 
     public MovieSyncAdapter(Context context, boolean autoInitialize) {
         super(context, autoInitialize);
+    }
+
+    public MovieSyncAdapter(Context context, boolean autoInitialize, boolean allowParallelSyncs) {
+        super(context, autoInitialize, allowParallelSyncs);
     }
 
     public static void syncImmediately(Context context) {
@@ -109,44 +112,7 @@ public class MovieSyncAdapter extends AbstractThreadedSyncAdapter {
                 public void onResponse(Response<SearchResponse> response, Retrofit retrofit) {
                     List<SearchResponse.MovieModel> movieList = response.body().getMovieList();
                     Utility.storeMovieList(getContext(), movieList);
-                    /*for (final SearchResponse.MovieModel movie : movieList) {
-                        movieDBApiService.getMovieRuntime(movie.getMovieId()).enqueue(new Callback<MovieRuntime>() {
-                            @Override
-                            public void onResponse(Response<MovieRuntime> runtime, Retrofit retrofit) {
-                                Utility.updateMovieWithRuntime(getContext(), movie.getMovieId(), runtime.body().getRuntime());
-                            }
-
-                            @Override
-                            public void onFailure(Throwable t) {
-                                Log.e("SyncAdapter", "Error updatiing movie runtime: " + t.getMessage());
-                            }
-                        });
-                        movieDBApiService.getMovieReviews(movie.getMovieId()).enqueue(new Callback<AllComments>() {
-                            @Override
-                            public void onResponse(Response<AllComments> response, Retrofit retrofit) {
-                                List<AllComments.Comment> commentList = response.body().getCommentList();
-                                Utility.storeCommentsList(getContext(), commentList, movie.getMovieId());
-                            }
-
-                            @Override
-                            public void onFailure(Throwable t) {
-                                Log.e("SyncAdapter", "Error inserting comments: " + t.getMessage());
-                            }
-                        });
-                        movieDBApiService.getMovieTrailers(movie.getMovieId()).enqueue(new Callback<AllTrailers>() {
-                            @Override
-                            public void onResponse(Response<AllTrailers> response, Retrofit retrofit) {
-                                List<AllTrailers.MovieTrailer> trailerList = response.body().getTrailerList();
-                                Utility.storeTrailerList(getContext(), trailerList, movie.getMovieId());
-                            }
-
-                            @Override
-                            public void onFailure(Throwable t) {
-                                Log.e("SyncAdapter", "Error inserting trailers: " + t.getMessage());
-                            }
-                        });
-                    }*/
-                    sendNotification();
+                    Utility.sendNotification(getContext(), lastSyncTime);
                 }
 
                 @Override
@@ -157,53 +123,5 @@ public class MovieSyncAdapter extends AbstractThreadedSyncAdapter {
         }
     }
 
-    private void sendNotification() {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
-        boolean displayNotifications = prefs.getBoolean(getContext().getString(R.string.prefs_notification_key), true);
-
-        if (!displayNotifications) {
-            return;
-        }
-
-        String lastNotificationKey = getContext().getString(R.string.prefs_notification_last_key);
-        lastSyncTime = prefs.getLong(lastNotificationKey, 0);
-
-        if (Utility.isOneDayLater(lastSyncTime)) {
-            //Show notification
-
-            int smallIcon = R.mipmap.ic_launcher;
-            Bitmap largeIcon = BitmapFactory.decodeResource(
-                    getContext().getResources(),
-                    R.mipmap.ic_launcher);
-
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext())
-                    .setSmallIcon(smallIcon)
-                    .setLargeIcon(largeIcon)
-                    .setContentTitle(getContext().getString(R.string.app_name))
-                    .setContentText(getContext().getString(R.string.notification_content));
-
-            Intent notificationIntent = new Intent(getContext(), MainActivity.class);
-
-            // The stack builder object will contain an artificial back stack for the
-            // started Activity.
-            // This ensures that navigating backward from the Activity leads out of
-            // your application to the Home screen.
-            TaskStackBuilder stackBuilder = TaskStackBuilder.create(getContext());
-            stackBuilder.addNextIntent(notificationIntent);
-            PendingIntent resultPendingIntent =
-                    stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
-
-            builder.setContentIntent(resultPendingIntent);
-
-            NotificationManager notificationManager =
-                    (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
-
-            notificationManager.notify(MOVIE_NOTIFICATION_ID, builder.build()); //notify
-
-            SharedPreferences.Editor editor = prefs.edit();
-            editor.putLong(lastNotificationKey, System.currentTimeMillis());
-            editor.apply();
-        }
-
-    }
 }
+

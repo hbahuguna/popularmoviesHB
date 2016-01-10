@@ -44,8 +44,6 @@ public class MainActivity extends AppCompatActivity implements MainActivityFragm
                 getSupportActionBar().setElevation(0f);
             }
 
-            MainActivityFragment mainActivityFragment = ((MainActivityFragment) getSupportFragmentManager()
-                    .findFragmentById(R.id.fragment_movies));
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
             String lastNotificationKey = getString(R.string.prefs_notification_last_key);
             long lastSyncTime = prefs.getLong(lastNotificationKey, 0L);
@@ -102,5 +100,4 @@ public class MainActivity extends AppCompatActivity implements MainActivityFragm
             startActivity(intent);
         }
     }
-
 }

@@ -20,6 +20,7 @@ import android.widget.GridView;
 import android.widget.ProgressBar;
 
 import com.himanshubahuguna.android.popularmovieshb.data.MovieContract;
+import com.himanshubahuguna.android.popularmovieshb.model.Movie;
 import com.himanshubahuguna.android.popularmovieshb.sync.MovieSyncAdapter;
 
 import java.util.ArrayList;
@@ -69,7 +70,6 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Cursor currentData = (Cursor) parent.getItemAtPosition(position);
                 if (currentData != null) {
-                    Intent detailsIntent = new Intent(getActivity(), MovieDetailsActivity.class);
                     final int MOVIE_ID_COL = currentData.getColumnIndex(MovieContract.MovieEntry._ID);
                     Uri movieUri = MovieContract.MovieEntry.buildMovieWithId(currentData.getInt(MOVIE_ID_COL));
                     ((Callback) getActivity())
@@ -77,7 +77,6 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
                 }
             }
         });
-
         return rootView;
     }
 
@@ -97,11 +96,6 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
         return super.onOptionsItemSelected(item);
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-        updateMovies();
-    }
 
     private void updateMovies() {
         MovieSyncAdapter.syncImmediately(getActivity());
